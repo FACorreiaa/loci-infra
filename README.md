@@ -112,3 +112,4 @@ image-updater component. Example step to add to the server's release workflow:
   (see `secrets/README.md`). Losing it = re-seal everything.
 - The Postgres image is **amd64-only** — keep `server_type` on an x86 plan.
 - Verify a **backup restore** works before trusting the nightly CronJob.
+# loci-infra
