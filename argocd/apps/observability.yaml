@@ -17,7 +17,7 @@ spec:
         releaseName: alloy
         valueFiles:
           - $values/observability/alloy-values.yaml
-    - repoURL: https://github.com/FACorreiaa/loci-infra.git
+    - repoURL: git@github.com:FACorreiaa/loci-infra.git
       targetRevision: main
       ref: values
   destination:

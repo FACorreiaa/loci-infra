@@ -68,7 +68,14 @@ kubectl apply -f ../argocd/argocd-ingressroute.yaml
 ```
 
 **4. Seal your secrets** — see `secrets/README.md`, commit them, push this repo.
-Update the `repoURL` placeholders in `argocd/*.yaml` to your remote first.
+The ArgoCD apps pull this repo over SSH (`git@github.com:FACorreiaa/loci-infra.git`),
+so give ArgoCD a **read-only deploy key**:
+```sh
+ssh-keygen -t ed25519 -f argocd_deploy -N ""      # add argocd_deploy.pub as a repo Deploy key on GitHub
+argocd repo add git@github.com:FACorreiaa/loci-infra.git --ssh-private-key-path argocd_deploy
+```
+(Prefer HTTPS + PAT? Swap the `repoURL`s back to `https://github.com/...` and
+`argocd repo add ... --username x --password <PAT>`.)
 
 **5. Bootstrap the app-of-apps**
 ```sh
@@ -112,4 +119,3 @@ image-updater component. Example step to add to the server's release workflow:
   (see `secrets/README.md`). Losing it = re-seal everything.
 - The Postgres image is **amd64-only** — keep `server_type` on an x86 plan.
 - Verify a **backup restore** works before trusting the nightly CronJob.
-# loci-infra

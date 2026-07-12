@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/FACorreiaa/loci-infra.git
+    repoURL: git@github.com:FACorreiaa/loci-infra.git
     targetRevision: main
     path: charts/loci-postgres
     helm:

@@ -10,8 +10,7 @@ metadata:
 spec:
   project: default
   source:
-    # PLACEHOLDER — set to the loci-infra Git remote once pushed.
-    repoURL: https://github.com/FACorreiaa/loci-infra.git
+    repoURL: git@github.com:FACorreiaa/loci-infra.git
     targetRevision: main
     path: argocd/apps
   destination:
