@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: loci-postgres
+  labels:
+    app.kubernetes.io/name: loci-postgres
+spec:
+  # Headless — the API reaches the single pod by the stable DNS name
+  # loci-postgres.<namespace>.svc.cluster.local on 5432.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: loci-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

@@ -1,0 +1,45 @@
+image:
+  repository: ghcr.io/facorreia/loci-connect-api-postgres
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# GHCR is private; reference an image pull secret created in the namespace.
+imagePullSecrets:
+  - name: ghcr-pull
+
+# Existing Secret (delivered as a SealedSecret) holding POSTGRES_USER /
+# POSTGRES_PASSWORD / POSTGRES_DB. Must match the DB_* the API uses.
+credentialsSecret: loci-postgres-credentials
+
+storage:
+  # local-path is k3s's built-in storage class (node-local disk).
+  storageClass: local-path
+  size: 20Gi
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    # Snug on an 8 GB node shared with the API + k3s + ArgoCD.
+    memory: 2Gi
+
+# PG tuning mirrors the server repo's config/postgresql.conf intent.
+postgresql:
+  maxConnections: 100
+  sharedBuffers: 512MB
+
+backup:
+  enabled: true
+  schedule: "0 2 * * *" # 02:00 UTC nightly
+  # pg_dump is streamed to S3-compatible object storage (Hetzner).
+  s3:
+    endpoint: https://fsn1.your-objectstorage.com
+    bucket: loci-db-backups
+    # Existing Secret with AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY.
+    credentialsSecret: loci-backup-s3
+  retentionDays: 14
+  image:
+    # postgres client + awscli for pg_dump | aws s3 cp.
+    repository: ghcr.io/facorreia/loci-connect-api-postgres
+    tag: latest

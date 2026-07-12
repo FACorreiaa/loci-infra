@@ -1,0 +1,6 @@
+apiVersion: v2
+name: loci-postgres
+description: Single-node PostgreSQL (PostGIS + pgvector + TimescaleDB) for Loci, with a nightly backup to object storage.
+type: application
+version: 0.1.0
+appVersion: "18"

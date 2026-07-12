@@ -1,0 +1,55 @@
+{{- if .Values.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: loci-postgres-backup
+  labels:
+    app.kubernetes.io/name: loci-postgres
+    app.kubernetes.io/component: backup
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: Never
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: backup
+              image: "{{ .Values.backup.image.repository }}:{{ .Values.backup.image.tag }}"
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -euo pipefail
+                  # The postgis image ships pg_dump but not aws; install on demand.
+                  if ! command -v aws >/dev/null 2>&1; then
+                    apt-get update -qq && apt-get install -y -qq awscli >/dev/null
+                  fi
+                  ts="$(date -u +%Y%m%dT%H%M%SZ)"
+                  file="loci-${ts}.sql.gz"
+                  echo "Dumping ${POSTGRES_DB} -> ${file}"
+                  pg_dump -h loci-postgres -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
+                    | gzip \
+                    | aws --endpoint-url "{{ .Values.backup.s3.endpoint }}" \
+                        s3 cp - "s3://{{ .Values.backup.s3.bucket }}/${file}"
+                  echo "Uploaded ${file}"
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.credentialsSecret }}
+                      key: POSTGRES_PASSWORD
+              envFrom:
+                - secretRef:
+                    name: {{ .Values.credentialsSecret }}      # POSTGRES_USER / POSTGRES_DB
+                - secretRef:
+                    name: {{ .Values.backup.s3.credentialsSecret }} # AWS_ACCESS_KEY_ID / _SECRET_ACCESS_KEY
+{{- end }}

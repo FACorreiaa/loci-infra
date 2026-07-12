@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: loci-api
+  labels:
+    app.kubernetes.io/name: loci-api
+spec:
+  selector:
+    app.kubernetes.io/name: loci-api
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+    - name: metrics
+      port: {{ .Values.service.metricsPort }}
+      targetPort: metrics

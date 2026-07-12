@@ -1,0 +1,87 @@
+# Grafana Alloy — ships metrics and logs to Grafana Cloud (free tier), so the
+# 8 GB node isn't burdened with a self-hosted Prometheus/Loki/Grafana stack.
+# Grafana Cloud endpoints + credentials come from the `grafana-cloud` Secret
+# (delivered as a SealedSecret): GC_PROM_URL, GC_PROM_USER, GC_LOKI_URL,
+# GC_LOKI_USER, GC_API_KEY.
+alloy:
+  extraEnv:
+    - name: GC_PROM_URL
+      valueFrom: { secretKeyRef: { name: grafana-cloud, key: GC_PROM_URL } }
+    - name: GC_PROM_USER
+      valueFrom: { secretKeyRef: { name: grafana-cloud, key: GC_PROM_USER } }
+    - name: GC_LOKI_URL
+      valueFrom: { secretKeyRef: { name: grafana-cloud, key: GC_LOKI_URL } }
+    - name: GC_LOKI_USER
+      valueFrom: { secretKeyRef: { name: grafana-cloud, key: GC_LOKI_USER } }
+    - name: GC_API_KEY
+      valueFrom: { secretKeyRef: { name: grafana-cloud, key: GC_API_KEY } }
+  configMap:
+    content: |
+      // ---- Metrics: scrape the API's Prometheus endpoint ----
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      discovery.relabel "loci_api" {
+        targets = discovery.kubernetes.pods.targets
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          regex         = "loci"
+          action        = "keep"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          regex         = "loci-api"
+          action        = "keep"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_port_name"]
+          regex         = "metrics"
+          action        = "keep"
+        }
+      }
+
+      prometheus.scrape "loci_api" {
+        targets    = discovery.relabel.loci_api.output
+        forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+        scrape_interval = "30s"
+      }
+
+      prometheus.remote_write "grafana_cloud" {
+        endpoint {
+          url = sys.env("GC_PROM_URL")
+          basic_auth {
+            username = sys.env("GC_PROM_USER")
+            password = sys.env("GC_API_KEY")
+          }
+        }
+      }
+
+      // ---- Logs: tail loci pod logs -> Loki ----
+      discovery.relabel "loci_logs" {
+        targets = discovery.kubernetes.pods.targets
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          regex         = "loci"
+          action        = "keep"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          target_label  = "app"
+        }
+      }
+
+      loki.source.kubernetes "loci" {
+        targets    = discovery.relabel.loci_logs.output
+        forward_to = [loki.write.grafana_cloud.receiver]
+      }
+
+      loki.write "grafana_cloud" {
+        endpoint {
+          url = sys.env("GC_LOKI_URL")
+          basic_auth {
+            username = sys.env("GC_LOKI_USER")
+            password = sys.env("GC_API_KEY")
+          }
+        }
+      }

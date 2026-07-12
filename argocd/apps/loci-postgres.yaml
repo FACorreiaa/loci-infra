@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loci-postgres
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/FACorreiaa/loci-infra.git
+    targetRevision: main
+    path: charts/loci-postgres
+    helm:
+      releaseName: loci-postgres
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: loci
+  syncPolicy:
+    automated:
+      prune: false # never auto-prune the database
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

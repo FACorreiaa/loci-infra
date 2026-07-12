@@ -1,0 +1,19 @@
+# Exposes the ArgoCD UI at argocd.<domain> via Traefik, terminating TLS with
+# the Cloudflare Origin Certificate. Apply after ArgoCD is installed.
+# Set the Host() to your real domain.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: argocd-server
+  namespace: argocd
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`argocd.example.com`)
+      kind: Rule
+      services:
+        - name: argocd-server
+          port: 80
+  tls:
+    secretName: loci-origin-cert-argocd

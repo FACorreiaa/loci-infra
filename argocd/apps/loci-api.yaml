@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loci-api
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/FACorreiaa/loci-infra.git
+    targetRevision: main
+    path: charts/loci-api
+    helm:
+      releaseName: loci-api
+      # The server repo's CI bumps image.tag here on each release; ArgoCD
+      # then rolls the Deployment. See scripts/README / the runbook.
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: loci
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

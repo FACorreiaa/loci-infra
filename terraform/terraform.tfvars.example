@@ -1,0 +1,18 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored.
+
+hcloud_token         = "CHANGE_ME"
+cloudflare_api_token = "CHANGE_ME"
+cloudflare_zone_id   = "CHANGE_ME"
+
+# Your real apex domain on Cloudflare (replaces the example.com placeholder).
+domain = "example.com"
+
+# Contents of your SSH public key (e.g. output of `cat ~/.ssh/id_ed25519.pub`).
+ssh_public_key = "ssh-ed25519 AAAA... you@host"
+
+# Lock SSH + k8s API to your IP, e.g. "203.0.113.7/32". Find it: curl ifconfig.me
+admin_cidr = "0.0.0.0/0"
+
+# Node size / region — defaults are cpx31 (4 vCPU / 8 GB) in fsn1.
+# server_type = "cpx31"
+# location    = "fsn1"

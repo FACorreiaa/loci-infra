@@ -1,0 +1,19 @@
+# Helm values for the argo-cd chart. The server runs in insecure mode because
+# Traefik terminates TLS in front of it (see argocd-ingressroute.yaml).
+configs:
+  params:
+    server.insecure: true
+  cm:
+    # PLACEHOLDER — set to argocd.<your-domain>.
+    url: https://argocd.example.com
+
+server:
+  # No chart-managed ingress; a Traefik IngressRoute handles exposure.
+  ingress:
+    enabled: false
+
+# Trim controllers not needed on a single node.
+dex:
+  enabled: false
+notifications:
+  enabled: false

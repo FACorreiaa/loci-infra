@@ -1,0 +1,28 @@
+#cloud-config
+# Provisions a single-node k3s server. k3s ships Traefik (ingress),
+# local-path (storage), and klipper servicelb (binds Traefik to the node's
+# :80/:443) — exactly what a one-box deployment needs, so nothing is disabled.
+package_update: true
+package_upgrade: true
+packages:
+  - curl
+  - ca-certificates
+  - fail2ban
+
+runcmd:
+  # Basic SSH hardening: keys only, no root password login.
+  - sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+  - systemctl restart ssh || systemctl restart sshd
+  - systemctl enable --now fail2ban
+  # Build the k3s TLS SAN list including this node's public IP (from Hetzner
+  # metadata) and the API hostname, so external kubectl and the ingress cert
+  # validate.
+  - PUBLIC_IP="$(curl -s http://169.254.169.254/hetzner/v1/metadata/public-ipv4)"
+  - mkdir -p /etc/rancher/k3s
+  - printf 'write-kubeconfig-mode: "0600"\ntls-san:\n  - "%s"\n  - "%s"\n' "$PUBLIC_IP" "${api_host}" > /etc/rancher/k3s/config.yaml
+  # Install k3s (stable channel). The config file above supplies the SANs.
+  - curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL=stable sh -
+  # Block until the node is Ready so cloud-init only reports done when usable.
+  - until k3s kubectl get node | grep -q ' Ready'; do sleep 5; done
+
+final_message: "k3s node ready after $UPTIME seconds"

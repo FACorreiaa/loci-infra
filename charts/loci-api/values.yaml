@@ -1,0 +1,54 @@
+image:
+  repository: ghcr.io/facorreia/loci-connect-api
+  # CI bumps this tag (see .github workflow in the server repo) → ArgoCD syncs.
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-pull
+
+replicas: 1
+
+# Hostname the API + MCP are served on (matches terraform api_host).
+# PLACEHOLDER — set to api.<your-domain>.
+host: api.example.com
+
+# Kubernetes TLS secret holding the Cloudflare Origin Certificate + key.
+# Delivered as a SealedSecret. Traefik terminates TLS with it; Cloudflare
+# is set to Full (strict).
+tlsSecret: loci-origin-cert
+
+# Existing Secret (SealedSecret) with the sensitive env: GEMINI_API_KEY,
+# JWT_SECRET, DB_PASSWORD, STRIPE_*, SMTP_PASSWORD, TWILIO_*, session/oauth.
+secretName: loci-api-secrets
+
+# Non-secret configuration → ConfigMap → env. Mirrors pkg/config/config.go.
+config:
+  APP_ENV: production
+  SERVER_HOST: "0.0.0.0"
+  SERVER_PORT: "8080"
+  DB_HOST: loci-postgres
+  DB_PORT: "5432"
+  DB_USER: loci
+  DB_NAME: loci
+  DB_SSLMODE: disable
+  GEMINI_MODEL: gemini-flash-lite-latest
+  GEMINI_EMBEDDING_MODEL: gemini-embedding-001
+  FREE_DAILY_LLM_LIMIT: "10"
+  PRO_DAILY_LLM_LIMIT: "300"
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "9090"
+  # BASE_URL / ALLOWED_ORIGINS get the real domain at install time.
+  BASE_URL: https://api.example.com
+  ALLOWED_ORIGINS: https://example.com
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+service:
+  port: 8080
+  metricsPort: 9090
