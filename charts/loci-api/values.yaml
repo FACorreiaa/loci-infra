@@ -52,3 +52,10 @@ resources:
 service:
   port: 8080
   metricsPort: 9090
+
+# Nightly preference re-rank: aggregates preference_feedback → user_preference_vectors.
+# Binary ships in the same API image (see loci-connect-api Dockerfile).
+preferenceRerank:
+  enabled: true
+  schedule: "15 3 * * *" # 03:15 UTC — after nightly DB backup
+  lookback: 168h          # users with feedback in the last 7 days

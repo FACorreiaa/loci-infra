@@ -119,3 +119,35 @@ image-updater component. Example step to add to the server's release workflow:
   (see `secrets/README.md`). Losing it = re-seal everything.
 - The Postgres image is **amd64-only** — keep `server_type` on an x86 plan.
 - Verify a **backup restore** works before trusting the nightly CronJob.
+
+## Restore drill (Postgres → GetTrip)
+
+Run this before trusting prod backups. Goal: prove a dump can boot a usable API.
+
+1. **Take a known-good dump** (or download the latest from the backup bucket):
+   ```bash
+   kubectl -n loci create job --from=cronjob/loci-postgres-backup restore-drill-backup
+   # or: aws --endpoint-url … s3 cp s3://loci-db-backups/loci-<ts>.sql.gz .
+   ```
+2. **Restore into a scratch DB** (same cluster or a throwaway StatefulSet):
+   ```bash
+   gunzip -c loci-<ts>.sql.gz | \
+     kubectl -n loci exec -i loci-postgres-0 -- \
+       psql -U loci -d loci
+   ```
+3. **Smoke the API** against that DB (port-forward if needed):
+   ```bash
+   # Authenticate as a user who had a trip in the dump, then:
+   # Connect RPC GetTrip / ListTrips — expect 200 + matching trip_id.
+   curl -sS -H "Authorization: Bearer $TOKEN" \
+     "$API_BASE/loci.trip.v1.TripService/ListTrips" \
+     -H 'Content-Type: application/json' -d '{}'
+   ```
+4. **Pass criteria**: ListTrips/GetTrip return the pre-backup trip; no migration panic on API boot.
+5. **Record** date + dump filename in the ops log; alert if `loci-postgres-backup` CronJob `lastScheduleTime` stalls >36h (wire PrometheusRule / Grafana alert next).
+
+## Staging + Stripe test keys
+
+- Point `charts/loci-api/values.yaml` `host` / `BASE_URL` / `ALLOWED_ORIGINS` at the staging domain (not production).
+- SealedSecret `loci-api-secrets` must carry Stripe **test** keys (`sk_test_…`, `pk_test_…`, test price IDs) on staging; never seal live keys into a shared staging namespace.
+- Preference re-rank CronJob (`loci-preference-rerank`, 03:15 UTC) shares the API image + DB config — disable via `preferenceRerank.enabled: false` if staging should stay cold.
