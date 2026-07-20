@@ -1,0 +1,42 @@
+{{- if .Values.preferenceRerank.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: loci-preference-rerank
+  labels:
+    app.kubernetes.io/name: loci-api
+    app.kubernetes.io/component: preference-rerank
+spec:
+  schedule: {{ .Values.preferenceRerank.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: Never
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: preference-rerank
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["./preference-rerank"]
+              args:
+                - -lookback={{ .Values.preferenceRerank.lookback }}
+              envFrom:
+                - configMapRef:
+                    name: loci-api-config
+                - secretRef:
+                    name: {{ .Values.secretName }}
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 256Mi
+{{- end }}
