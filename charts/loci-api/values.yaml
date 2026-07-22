@@ -59,3 +59,4 @@ preferenceRerank:
   enabled: true
   schedule: "15 3 * * *" # 03:15 UTC — after nightly DB backup
   lookback: 168h          # users with feedback in the last 7 days
+  embeddingBatch: 250     # backfill missing canonical POI embeddings before reranking

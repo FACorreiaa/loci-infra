@@ -28,6 +28,7 @@ spec:
               command: ["./preference-rerank"]
               args:
                 - -lookback={{ .Values.preferenceRerank.lookback }}
+                - -embedding-batch={{ .Values.preferenceRerank.embeddingBatch }}
               envFrom:
                 - configMapRef:
                     name: loci-api-config
